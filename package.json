@@ -1,0 +1,23 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "babel": {},
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --harmony index.js",
+    "build": "babel src -d lib",
+    "test": "mocha --harmony"
+  },
+  "author": "markarce",
+  "license": "ISC",
+  "dependencies": {
+    "koa": "^2.4.1",
+    "koa-route": "^3.2.0",
+    "koa-session": "^5.8.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "faker": "^4.1.0"
+  }
+}
