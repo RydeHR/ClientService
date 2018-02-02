@@ -1,5 +1,7 @@
 //Koa server for client-facing API
 const route = require('koa-route');
+var faker = require('faker');
+var fs = require('fs');
 const Koa = require('koa');
 const app = new Koa();
 
