@@ -3,24 +3,56 @@
 var faker = require('faker');
 var fs = require('fs');
 
+var generateUsers = (number) => {
+  var userList = [
+    ['111111111','Dillon'],
+    ['222222222','Jackie'],
+    ['333333333','Mark'],
+    ['444444444','Nick']
+  ];
+  for (var i = 4; i < number; i++) {
+    var dateSeed = Date.now();
+    dateSeed = dateSeed.toString().slice(-5);
+    var id = dateSeed + faker.random.number({min: 1000, max: 9999});
+    var name = faker.name.firstName();
+    userList.push([id, name]);
+  }
+  return userList;
+};
+
+var riders = generateUsers(100000);
+var drivers = generateUsers(10000);
+
 //Generates a single fake event object using faker
 var createEvent = (eventId) => {
   var eventObject = {};
-  eventObject.event_ID = eventId;           
-  eventObject.event_Start = Date.parse(faker.date.past());
-  eventObject.event_End = Date.parse(faker.date.past());
-  eventObject.event_IsClosed = 'false';
-  eventObject.rider_ID = faker.random.number();
-  eventObject.rider_Firstname = faker.name.firstName();
-  eventObject.driver_ID = faker.random.number();
-  eventObject.driver_Firstname = faker.name.firstName();
-  eventObject.driver_Availability = 'true';
-  eventObject.timestamp_Pickup = Date.parse(faker.date.recent());
-  eventObject.timestamp_Dropoff = Date.parse(faker.date.recent());
-  eventObject.geolocation_Pickup = `[${faker.address.latitude()}, ${faker.address.longitude()}]`;
-  eventObject.geolocation_Dropoff = `[${faker.address.latitude()}, ${faker.address.longitude()}]`;
-  eventObject.geolocation_SurgeZone = faker.random.number({min:0, max:200});
-  eventObject.surge_Multiplier = faker.finance.amount(0, 8, 2);
+
+  var now = new Date();
+  var threeMonthsAgo = now;
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  var rideLength = faker.random.number({min: 5*60, max: 20*60});
+  var eventLength = faker.random.number({min: 30, max: 10*60});
+  var pickupWait = faker.random.number({min: 60, max: 10*60});
+
+  var rider = riders[faker.random.number({min: 0, max: riders.length - 1})];
+  var driver = drivers[faker.random.number({min: 0, max: drivers.length - 1})];
+
+  eventObject.eventId = eventId;
+  eventObject.eventStart = Date.parse(faker.date.between(threeMonthsAgo, now));
+  eventObject.eventEnd = eventObject.eventStart + eventLength;
+  eventObject.eventIsClosed = 'true';
+  eventObject.riderId = rider[0];
+  eventObject.riderName = rider[1];
+  eventObject.driverId = driver[0];
+  eventObject.driverName = driver[1];
+  eventObject.driverIsAvailable = 'true';
+  eventObject.timestampPickup = eventObject.eventEnd + pickupWait;
+  eventObject.timestampDropoff = eventObject.timestampPickup + rideLength;
+  eventObject.geolocationPickup = `[${faker.address.latitude()}, ${faker.address.longitude()}]`;
+  eventObject.geolocationDropoff = `[${faker.address.latitude()}, ${faker.address.longitude()}]`;
+  eventObject.surgeZone = faker.random.number({min: 0, max: 200});
+  eventObject.surgeMulti = faker.finance.amount(0, 8, 2);
   eventObject.price = faker.finance.amount(0, 200, 2);
   eventObject.success = 'true';       
 
@@ -32,23 +64,23 @@ var generateData = (min, max) => {
   var generatedData = '';
   for (var i = min; i < max; i++) {
     var ev = createEvent(i);
-    generatedData += `${ev.event_ID},`+
-      `${ev.event_Start},`+
-      `${ev.event_End},`+
-      `${ev.event_IsClosed},`+
-      `${ev.rider_ID},`+
-      `${ev.rider_Firstname},`+
-      `${ev.driver_ID},`+
-      `${ev.driver_Firstname},`+
-      `${ev.driver_Availability},`+
-      `${ev.timestamp_Pickup},`+
-      `${ev.timestamp_Dropoff},`+
-      `"${ev.geolocation_Pickup}",`+
-      `"${ev.geolocation_Dropoff}",`+
-      `${ev.geolocation_SurgeZone},`+
-      `${ev.surge_Multiplier},`+
+    generatedData += `${ev.eventId},`+
+      `${ev.eventStart},`+
+      `${ev.eventEnd},`+
+      `${ev.eventIsClosed},`+
+      `${ev.riderId},`+
+      `${ev.riderName},`+
+      `${ev.driverId},`+
+      `${ev.driverName},`+
+      `${ev.driverIsAvailable},`+
+      `${ev.timestampPickup},`+
+      `${ev.timestampDropoff},`+
+      `"${ev.geolocationPickup}",`+
+      `"${ev.geolocationDropoff}",`+
+      `${ev.surgeZone},`+
+      `${ev.surgeMulti},`+
       `${ev.price},`+
-      `${ev.success},\n`;
+      `${ev.success}\n`;
     // Logs every 100000 generations to console to quickly detect failures
     if(i % 100000 === 0) {
       console.log(`${i} completed...`)
