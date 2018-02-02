@@ -27,13 +27,14 @@ var drivers = generateUsers(10000);
 var createEvent = (eventId) => {
   var eventObject = {};
 
-  var now = new Date();
-  var threeMonthsAgo = now;
+  var threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  var now = new Date();
+  
 
-  var rideLength = faker.random.number({min: 5*60, max: 20*60});
-  var eventLength = faker.random.number({min: 30, max: 10*60});
-  var pickupWait = faker.random.number({min: 60, max: 10*60});
+  var rideLength = faker.random.number({min: 10*60*1000, max: 30*60*1000});
+  var pickupWait = faker.random.number({min: 4*60*1000, max: 10*60*1000});
+  var eventLength = faker.random.number({min: pickupWait + rideLength, max: pickupWait + rideLength + 5*60*1000});
 
   var rider = riders[faker.random.number({min: 0, max: riders.length - 1})];
   var driver = drivers[faker.random.number({min: 0, max: drivers.length - 1})];
@@ -47,7 +48,7 @@ var createEvent = (eventId) => {
   eventObject.driverId = driver[0];
   eventObject.driverName = driver[1];
   eventObject.driverIsAvailable = 'true';
-  eventObject.timestampPickup = eventObject.eventEnd + pickupWait;
+  eventObject.timestampPickup = eventObject.eventStart + pickupWait;
   eventObject.timestampDropoff = eventObject.timestampPickup + rideLength;
   eventObject.geolocationPickup = `[${faker.address.latitude()}, ${faker.address.longitude()}]`;
   eventObject.geolocationDropoff = `[${faker.address.latitude()}, ${faker.address.longitude()}]`;
@@ -62,7 +63,7 @@ var createEvent = (eventId) => {
 //Creates a generated data object collection with event ids between min (inclusive) and max
 var generateData = (min, max) => {
   var generatedData = '';
-  for (var i = min; i < max; i++) {
+  for (var i = min; i <= max; i++) {
     var ev = createEvent(i);
     generatedData += `${ev.eventId},`+
       `${ev.eventStart},`+

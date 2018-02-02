@@ -55,7 +55,8 @@ const rider = {
     const userId = rider.id;
     const isBooking = rider.booking
 
-  }
+  },
+  
 }
 
 app.use(route.get('/group', group.list));
