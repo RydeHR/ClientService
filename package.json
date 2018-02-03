@@ -12,6 +12,7 @@
   "author": "markarce",
   "license": "ISC",
   "dependencies": {
+    "cassandra-driver": "^3.3.0",
     "koa": "^2.4.1",
     "koa-route": "^3.2.0",
     "koa-session": "^5.8.1"
