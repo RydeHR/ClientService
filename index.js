@@ -5,6 +5,7 @@ const fs = require('fs');
 const Koa = require('koa');
 const app = new Koa();
 const cassandra = require('cassandra-driver');
+const uuidv4 = require('uuid/v4');
 
 /*-- Connecting to cassandra database on localhost --*/
 const client = new cassandra.Client({contactPoints: ['127.0.0.1'], keyspace: 'rydeclient'})
@@ -44,18 +45,47 @@ const port = 5000;
 
 /*-- End Koa testing details --*/
 
+//rider obj: {id: int:9, name: "string", location: [lat, long]}
+
+class Event {
+  constructor(rider) {
+    this.eventId = uuidv4();
+    this.eventStart = undefined;
+    this.eventEnd = undefined;
+    this.eventIsClosed = 'false';
+    this.riderId = rider.id;
+    this.riderName = rider.name;
+    this.driverId = undefined;
+    this.driverName = undefined;
+    this.driverIsAvailable = undefined;
+    this.timestampPickup = undefined;
+    this.timestampDropoff = undefined;
+    this.geolocationPickup = `${rider.location}`;
+    this.geolocationDropoff = [undefined,undefined];
+    this.surgeZone = undefined;
+    this.surgeMulti = undefined;
+    this.price = undefined;
+    this.success = undefined;
+  }
+}
+
 const rider = {
-  signon: (ctx, rider, location) => {
-    const pickup = location;
-    const riderId = rider.id;
+  signon: (ctx, rider) => {
+    var now = new Date();
+    riderObj = JSON.parse(rider);
+    var event = new Event(riderObj);
+    event.eventStart = Date.parse(now);
+    ctx.response.body = event.eventId;
+    console.log('event stored in DBs, sent to services: ', event);
+
     //rider signs on and posts info to server
     //generate new session object and send session ID in response
     //fill session object with data
     //send session object to /location/signOn
     //store session obj in redis as ID: obj
   },
-  destination: (ctx, session, destination) => {
-    const sessionId = session.id
+  destination: (ctx, event, destination) => {
+    const eventId = event.id
     const riderId = session.riderId;
     //read sessionId from redis database and extract session Obj
     //copy location info into destination field of obj
@@ -79,15 +109,15 @@ const rider = {
     const sessionId = session;
     const riderId = '111111111';
 
-    ctx.body = 'something';
-
     let query = 'SELECT * FROM sessions WHERE rider_id = 111111111';
     return new Promise ((resolve, reject) => {
       client.execute(query, (err, results) => {
         if (err) { reject(err); }
         else { resolve(results); }
       })
-    }).then((results) => { console.log(results)})
+    }).then((results) => {
+      ctx.body = results;
+    })
   }
 }
 

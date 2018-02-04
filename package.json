@@ -15,7 +15,9 @@
     "cassandra-driver": "^3.3.0",
     "koa": "^2.4.1",
     "koa-route": "^3.2.0",
-    "koa-session": "^5.8.1"
+    "koa-session": "^5.8.1",
+    "newrelic": "^2.7.0",
+    "uuid": "^3.2.1"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
