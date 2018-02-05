@@ -7,7 +7,7 @@ var uuidv4 = require('uuid/v4');
 /* Create the users we'll use for the fake data in multiple tables */
 var createUsers = (number) => {
   var userList = [
-  //hardcode 4 users for testing purposes
+  /* hardcode 4 users for testing purposes */
     ['111111111','Dillon'],
     ['222222222','Jackie'],
     ['333333333','Mark'],
@@ -23,21 +23,21 @@ var createUsers = (number) => {
   return userList;
 };
 
+/* Using 100K riders and 10K riders for the 10M record db */
 var riders = createUsers(100000);
 var drivers = createUsers(10000);
 
-/* Output rider list to file to later add as table in db */
+/* Output rider list to file to later add as separate table in db */
 var createRiderTable = (riderList) => {
   var output = '';
   for (var i = 0; i < riderList.length; i++) {
-    output += `${riderList[i][0]},${riderList[i][1]} + \n`;
+    output += `${riderList[i][0]},${riderList[i][1]}\n`;
   }
 
   return output;
 };
 
 var formattedRiders = createRiderTable(riders);
-writeData(formattedRiders, 'riderTable', '');
 
 /* Generates a single fake event object using faker */
 var createEvent = () => {
@@ -110,9 +110,9 @@ var generateEvents = (min, max) => {
 
 // Takes the generated object and writes it to a data file template with an incremented number at the end
 var writeData = function (data, fileName, fileNum) {
-  console.log(`Attempting write of 1M objects to /data/dataOutput${fileNum}.csv`);
-  fs.writeFileSync(`./data/${filename}${fileNum}.csv`, data,);
-  console.log(`dataOutput${fileNum}.csv written successfully`);
+  console.log(`Attempting write of objects to /data/${fileName}${fileNum}.csv`);
+  fs.writeFileSync(`./data/${fileName}${fileNum}.csv`, data,);
+  console.log(`${fileName}${fileNum}.csv written successfully`);
 };
 
 // Writes generated data in 1M record chunks to avoid running out of memory
@@ -134,10 +134,20 @@ var writeDataChunks = function(chunks) {
   console.log(`Completed in ${(seconds == 60 ? (minutes + 1) + ":00" : minutes + ":" + (seconds < 10 ? "0" : "") + seconds)}`)
 };
 
+writeData(formattedRiders, 'riderTable', '');
+
 writeDataChunks(10);
 
-/*
-COPY rides (event_ID, event_Start, event_End, event_isClosed, rider_ID, rider_Name, driver_ID, driver_Name, driver_Is_Available, timestamp_Pickup, timestamp_Dropoff, geolocation_Pickup, geolocation_Dropoff, surgeZone, surge_Multi, price, success) FROM '/usr/local/Cellar/cassandra/3.11.1/bin/dataOutput0.csv' with delimiter =',';
 
-create table rides(event_ID uuid, event_Start timestamp, event_End timestamp, event_isClosed boolean, rider_ID int, rider_Name text, driver_ID int, driver_Name text, driver_Is_Available boolean, timestamp_Pickup timestamp, timestamp_Dropoff timestamp, geolocation_Pickup list <float>, geolocation_Dropoff list <float>, surgeZone int, surge_Multi float, price decimal, success boolean, primary key(rider_ID, event_ID));
+/*
+create table rides_by_user(event_ID uuid, event_Start timestamp, event_End timestamp, event_isClosed boolean, rider_ID int, rider_Name text, driver_ID int, driver_Name text, driver_Is_Available boolean, timestamp_Pickup timestamp, timestamp_Dropoff timestamp, geolocation_Pickup list <float>, geolocation_Dropoff list <float>, surgeZone int, surge_Multi float, price decimal, success boolean, primary key(rider_ID, event_ID));
+COPY rides_by_user(event_ID, event_Start, event_End, event_isClosed, rider_ID, rider_Name, driver_ID, driver_Name, driver_Is_Available, timestamp_Pickup, timestamp_Dropoff, geolocation_Pickup, geolocation_Dropoff, surgeZone, surge_Multi, price, success) FROM '/usr/local/Cellar/cassandra/3.11.1/bin/dataOutput0.csv' with delimiter =',';
+
+create table riders(rider_ID int, rider_Name text, primary key(rider_ID));
+COPY riders (rider_ID, riderName) FROM '/usr/local/Cellar/cassandra/3.11.1/bin/riderTable.csv' with delimiter =',';
+
+create table rides_by_rideID(event_ID uuid, event_Start timestamp, event_End timestamp, event_isClosed boolean, rider_ID int, rider_Name text, driver_ID int, driver_Name text, driver_Is_Available boolean, timestamp_Pickup timestamp, timestamp_Dropoff timestamp, geolocation_Pickup list <float>, geolocation_Dropoff list <float>, surgeZone int, surge_Multi float, price decimal, success boolean, primary key(event_ID));
+COPY rides_by_rideID(event_ID, event_Start, event_End, event_isClosed, rider_ID, rider_Name, driver_ID, driver_Name, driver_Is_Available, timestamp_Pickup, timestamp_Dropoff, geolocation_Pickup, geolocation_Dropoff, surgeZone, surge_Multi, price, success) FROM '/usr/local/Cellar/cassandra/3.11.1/bin/dataOutput0.csv' with delimiter =',';
+
+
 */

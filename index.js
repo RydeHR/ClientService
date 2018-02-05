@@ -81,31 +81,43 @@ const rider = {
     const isBooking = event.success
 
   },
-  ridehistory: (ctx, event) => {
-    // console.log('logged');
-    const eventId = event;
-    const riderId = '111111111';
-
-    let query = 'SELECT * FROM rides WHERE rider_id = 111111111';
+  /* Lookup a rider's ride history  */
+  rideHistory: (ctx, riderId) => {
+    let query = `SELECT * FROM rides_by_user WHERE rider_id = ${riderId}`;
     return new Promise ((resolve, reject) => {
       client.execute(query, (err, results) => {
         if (err) { reject(err); }
         else { resolve(results); }
       })
     }).then((results) => {
+      ctx.response.code = 200;
+      ctx.body = results;
+    })
+  },
+  /* Lookup an indivdual ride from its rideId UUID attribute */
+  rideLookup: (ctx, eventId) => {
+    let query = `SELECT * FROM rides_by_rideid WHERE event_id = ${eventId}`;
+    return new Promise ((resolve, reject) => {
+      client.execute(query, (err, results) => {
+        if (err) { reject(err); }
+        else { resolve(results); }
+      })
+    }).then((results) => {
+      ctx.response.code = 200;
       ctx.body = results;
     })
   }
 }
 
+/* Configure app routes on server */
 app.use(route.post('/ui/:rider/signon', rider.signon));
 app.use(route.post('/ui/:event/:destination', rider.destination))
 app.use(route.post('/ui/:event/accept', rider.accept));
 app.use(route.post('/ui/:event/cancel', rider.cancel));
-app.use(route.get('/ui/:event/ridehistory', rider.ridehistory));
+app.use(route.get('/ui/:event/ridehistory', rider.rideHistory));
+app.use(route.get('/ui/:event', rider.rideLookup));
 
-
-
+/* Start server */
 app.listen(port, () => {
   console.log(`Server listening on https://localhost/${port}`)
 });
