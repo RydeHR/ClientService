@@ -2,17 +2,22 @@
   "name": "server",
   "version": "1.0.0",
   "babel": {},
-  "description": "",
+  "description": "Uber for cars",
   "main": "index.js",
   "scripts": {
     "start": "node --harmony index.js",
     "build": "babel src -d lib",
     "test": "mocha --harmony"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RydeHR"
+  },
   "author": "markarce",
   "license": "ISC",
   "dependencies": {
     "cassandra-driver": "^3.3.0",
+    "dotenv": "^5.0.0",
     "koa": "^2.4.1",
     "koa-route": "^3.2.0",
     "koa-session": "^5.8.1",
