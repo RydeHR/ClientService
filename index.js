@@ -46,7 +46,7 @@ class Event {
     this.success = undefined;
   }
 }
-
+/*--- 'rider' container for all user-facing routes ---*/
 const rider = {
   /*--- Client signs on with app, generating a new session ---
     Request body requirement: {
@@ -59,7 +59,7 @@ const rider = {
     let e = new Event(ctx.request.body);
     e.eventStart = Date.parse(now);
     /*--- Send new event object to /location to find a driver in the area ---*/
-    console.log('Sending event to /location/init\n', e);
+    console.log('Send event to /location/init');
     /*--- One insert statement per table that stores event data ---*/
     let query1 = `INSERT INTO rides_by_user (`+
     `event_id, event_start, rider_id, rider_name, geolocation_pickup) `+
@@ -80,8 +80,8 @@ const rider = {
         else { resolve(results); }
       })
     }).then((results) => {
-      console.log('event stored in DBs: \n', e);
-      ctx.response.code = 200;
+      console.log('event stored in DB');
+      ctx.response.code = 201;
       ctx.body = `${e.eventId}`;
     })
   },
@@ -93,27 +93,41 @@ const rider = {
       "geoLocationDropoff": tuple
   }*/
   destination: (ctx, riderId) => {
-    let obj = ctx.request.body;
+    let userObj = ctx.request.body;
     /*--- Send obj to /pricing to get destination-based price ---*/
-    console.log('send to pricing: ', obj);
-    /*--- Update DB with dropoff location ---*/
-    let query1 = `UPDATE rides_by_user SET geolocation_dropoff = ? WHERE rider_id = ? AND event_id = ?`;
-    let query2 = `UPDATE rides_by_rideid SET geolocation_dropoff = ? WHERE event_id = ?`;
-    let queries = [
-      { query: query1, params: [obj.geoLocationDropoff, obj.riderId, obj.eventId]},
-      { query: query2, params: [obj.geoLocationDropoff, obj.eventId]}
-    ];
+    console.log('send id/loc/dest to pricing');
+    /*--- Query db for session info ---*/
+    let query = `SELECT * FROM rides_by_rideid WHERE event_id = ${userObj.eventId}`;
     return new Promise ((resolve, reject) => {
-      client.batch(queries, {prepare: true}, (err, results) => {
+      client.execute(query, {prepare: true}, (err, results) => {
         if (err) { reject(err); }
         else { resolve(results); }
       })
     }).then((results) => {
-      console.log('This should call /locations now\n');
-      ctx.response.code = 200;
-      ctx.body = 'Getting a price...';
+      let e = results["rows"][0];
+      /*--- If the event exists and is open, then continue, else return a 404 to user ---*/
+      if (e && !e.event_isclosed) {
+        /*--- Update DB with dropoff location ---*/
+        let query1 = `UPDATE rides_by_user SET geolocation_dropoff = ? WHERE rider_id = ? AND event_id = ?`;
+        let query2 = `UPDATE rides_by_rideid SET geolocation_dropoff = ? WHERE event_id = ?`;
+        let queries = [
+          { query: query1, params: [userObj.geoLocationDropoff, userObj.riderId, userObj.eventId]},
+          { query: query2, params: [userObj.geoLocationDropoff, userObj.eventId]}
+        ];
+        return new Promise ((resolve, reject) => {
+          client.batch(queries, {prepare: true}, (err, results) => {
+            if (err) { reject(err); }
+            else { resolve(results); }
+          })
+        }).then((results) => {
+          ctx.response.code = 200;
+          ctx.body = 'Getting a price...';
+        })
+      } else {
+        ctx.response.code = 404;
+        ctx.body = 'No open session with that ID';
+      }
     })
-
   },
 
   /*--- Close a session as success (if booked) OR ---
@@ -125,8 +139,7 @@ const rider = {
   closeSession: (ctx, riderId) => {
     let end = new Date();
     let userObj = ctx.request.body;
-    console.log('userObj: ', userObj)
-    // Query db for session info
+    /*--- Query db for session info ---*/
     let query = `SELECT * FROM rides_by_rideid WHERE event_id = ${userObj.eventId}`;
     return new Promise ((resolve, reject) => {
       client.execute(query, {prepare: true}, (err, results) => {
@@ -136,11 +149,11 @@ const rider = {
     }).then((results) => {
       let e = results["rows"][0];
       /*--- If the event is open, close it, else return a 404 to user ---*/
-      if (!e.event_isclosed) {
+      if (e && !e.event_isclosed) {
         e.event_isclosed = true;
         e.success = userObj.success;
         e.eventEnd = Date.parse(end);
-        console.log('sending event object to /events\n', e);
+        console.log('sending event object to /events');
         ctx.response.code = 200;
         let queries = [];
         /*--- Check if client booked, dispatch driver and update event for later lookup ---*/
@@ -162,14 +175,12 @@ const rider = {
             { query: query2, params: [e.event_id]}
           ];
         }
-          return new Promise ((resolve, reject) => {
-            client.batch(queries, {prepare: true}, (err, results) => {
-              if (err) { reject(err); }
-              else { resolve(results); }
-            })
-          }).then((results) => {
-            console.log('DB transaction results: ', results)
+        return new Promise ((resolve, reject) => {
+          client.batch(queries, {prepare: true}, (err, results) => {
+            if (err) { reject(err); }
+            else { resolve(results); }
           })
+        })
       } else {
         ctx.response.code = 404;
         ctx.body = 'No open session with that ID';
@@ -206,7 +217,7 @@ const rider = {
       })
     }).then((results) => {
       ctx.response.code = 200;
-      ctx.body = results;
+      ctx.body = results["rows"][0];
     })
   }
 }
