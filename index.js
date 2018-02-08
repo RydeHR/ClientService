@@ -59,7 +59,7 @@ const rider = {
     let e = new Event(ctx.request.body);
     e.eventStart = Date.parse(now);
     /*--- Send new event object to /location to find a driver in the area ---*/
-    console.log('Send event to /location/init');
+    console.log('Send event object {e} to /location/init');
     /*--- One insert statement per table that stores event data ---*/
     let query1 = `INSERT INTO rides_by_user (`+
     `event_id, event_start, rider_id, rider_name, geolocation_pickup) `+
@@ -80,7 +80,7 @@ const rider = {
         else { resolve(results); }
       })
     }).then((results) => {
-      console.log('event stored in DB');
+      console.log('Event stored in DB');
       ctx.response.code = 201;
       ctx.body = `${e.eventId}`;
     })
@@ -95,16 +95,10 @@ const rider = {
   destination: (ctx, riderId) => {
     let userObj = ctx.request.body;
     /*--- Send obj to /pricing to get destination-based price ---*/
-    console.log('send id/loc/dest to pricing');
+    console.log('Send {userObj} to pricing');
     /*--- Query db for session info ---*/
-    let query = `SELECT * FROM rides_by_rideid WHERE event_id = ${userObj.eventId}`;
-    return new Promise ((resolve, reject) => {
-      client.execute(query, {prepare: true}, (err, results) => {
-        if (err) { reject(err); }
-        else { resolve(results); }
-      })
-    }).then((results) => {
-      let e = results["rows"][0];
+    return rider.eventDetails(riderId, userObj.eventId).then((results) => {
+      let e = results;
       /*--- If the event exists and is open, then continue, else return a 404 to user ---*/
       if (e && !e.event_isclosed) {
         /*--- Update DB with dropoff location ---*/
@@ -136,45 +130,81 @@ const rider = {
       "eventId": uuid, 
       "success": boolean
   }*/
-  closeSession: (ctx, riderId) => {
-    let end = new Date();
-    let userObj = ctx.request.body;
+  eventDetails: (riderId, eventId) => {
     /*--- Query db for session info ---*/
-    let query = `SELECT * FROM rides_by_rideid WHERE event_id = ${userObj.eventId}`;
+    let query = `SELECT * FROM rides_by_rideid WHERE event_id = ${eventId}`;
     return new Promise ((resolve, reject) => {
       client.execute(query, {prepare: true}, (err, results) => {
         if (err) { reject(err); }
         else { resolve(results); }
       })
     }).then((results) => {
-      let e = results["rows"][0];
-      /*--- If the event is open, close it, else return a 404 to user ---*/
-      if (e && !e.event_isclosed) {
+    /*--- If results are found, return them, else return undefined ---*/
+      if (results["rows"].length === 1 && results["rows"][0].rider_id.toString() === riderId) {
+        return results["rows"][0];
+      } else {
+        console.log('Invalid userID / eventID combination or event not found');
+        return undefined;
+      }
+    })
+  },
+  /*--- Close a booked session as success ---
+    Request body requirement: {
+      "eventId": uuid, 
+  }*/
+  accept: (ctx, riderId) => {
+    let end = new Date();
+    let eventObj = ctx.request.body;
+    /*--- Call eventDetails to query db for session info ---*/
+    return rider.eventDetails(riderId, eventObj.eventId).then((results) => {
+      e = results;
+      if (e) {
+        ctx.body = 'Driver dispatched';
         e.event_isclosed = true;
-        e.success = userObj.success;
+        e.success = true;
+        e.event_end = Date.parse(end);
+        console.log('Send event object {e} to /events');
+        let query1 = `UPDATE rides_by_user SET event_isclosed = ?, success = ?, event_end = ? WHERE rider_id = ? AND event_id = ?`;
+        let query2 = `UPDATE rides_by_rideid SET event_isclosed = ?, success = ?, event_end = ? WHERE event_id = ?`;
+        queries = [
+          { query: query1, params: [e.event_isclosed, e.success, e.event_end, riderId, e.event_id]},
+          { query: query2, params: [e.event_isclosed, e.success, e.event_end, e.event_id]}
+        ];
+        return new Promise ((resolve, reject) => {
+          client.batch(queries, {prepare: true}, (err, results) => {
+            if (err) { reject(err); }
+            else { resolve(results); }
+          })
+        })
+      /*--- Return 404 if session not found ---*/
+      } else {
+        ctx.response.code = 404;
+        ctx.body = 'No open session with that ID';
+      }
+    })
+  },
+  /*--- Cancel an in-progress session at any time ---
+    Request body requirement: {
+      "eventId": uuid, 
+  }*/
+  cancel: (ctx, riderId) => {
+    let end = new Date();
+    let eventObj = ctx.request.body;
+    /*--- Call eventDetails to query db for session info ---*/
+    return rider.eventDetails(riderId, eventObj.eventId).then((results) => {
+      e = results;
+      if (e) {
+        ctx.body = 'Session canceled';
+        e.event_isclosed = true;
+        e.success = false;
         e.eventEnd = Date.parse(end);
-        console.log('sending event object to /events');
-        ctx.response.code = 200;
-        let queries = [];
-        /*--- Check if client booked, dispatch driver and update event for later lookup ---*/
-        if (e.success) {
-          ctx.body = 'Driver dispatched';
-          let query1 = `UPDATE rides_by_user SET event_isclosed = ?, success = ? WHERE rider_id = ? AND event_id = ?`
-          let query2 = `UPDATE rides_by_rideid SET event_isclosed = ?, success = ? WHERE event_id = ?`
-          queries = [
-            { query: query1, params: [e.event_isclosed, e.success, riderId, e.event_id]},
-            { query: query2, params: [e.event_isclosed, e.success, e.event_id]}
-          ];
-        } else {
-          /*--- If client didn't book a ride, the session is closed and deleted without booking ---*/
-          ctx.body = 'Session canceled';
-          let query1 = `DELETE FROM rides_by_user WHERE rider_id = ? AND event_id = ?`
-          let query2 = `DELETE FROM rides_by_rideid WHERE event_id = ?`
-          queries = [
-            { query: query1, params: [riderId, e.event_id]},
-            { query: query2, params: [e.event_id]}
-          ];
-        }
+        console.log('Send event object {e} to /events');
+        let query1 = `DELETE FROM rides_by_user WHERE rider_id = ? AND event_id = ?`;
+        let query2 = `DELETE FROM rides_by_rideid WHERE event_id = ?`;
+        queries = [
+          { query: query1, params: [riderId, e.event_id]},
+          { query: query2, params: [e.event_id]}
+        ];
         return new Promise ((resolve, reject) => {
           client.batch(queries, {prepare: true}, (err, results) => {
             if (err) { reject(err); }
@@ -182,6 +212,7 @@ const rider = {
           })
         })
       } else {
+        /*--- Return 404 if session not found ---*/
         ctx.response.code = 404;
         ctx.body = 'No open session with that ID';
       }
@@ -200,24 +231,28 @@ const rider = {
         else { resolve(results); }
       })
     }).then((results) => {
-      ctx.response.code = 200;
-      ctx.body = results;
+      if (results) {
+        ctx.response.code = 200;
+        ctx.body = results;
+      } else {
+        ctx.response.code = 404;
+        ctx.body = 'No rides found for that user ID';
+      }
     })
   },
   /*--- Lookup an indivdual ride from its eventId UUID attribute ---
     Request body requirement: {
-      "riderId": int
+      "eventId": UUID
   }*/
-  rideLookup: (ctx, eventId) => {
-    let query = `SELECT * FROM rides_by_rideid WHERE event_id = ${eventId}`;
-    return new Promise ((resolve, reject) => {
-      client.execute(query, (err, results) => {
-        if (err) { reject(err); }
-        else { resolve(results); }
-      })
-    }).then((results) => {
-      ctx.response.code = 200;
-      ctx.body = results["rows"][0];
+  rideLookup: (ctx, riderId, eventId) => {
+    return rider.eventDetails(riderId, eventId).then((results) => {
+      if (results) {
+        ctx.response.code = 200;
+        ctx.body = results;
+      } else {
+        ctx.response.code = 404;
+        ctx.body = 'No event found with that rider ID / event ID combination'
+      }
     })
   }
 }
@@ -225,10 +260,10 @@ const rider = {
 /* Configure app routes on server */
 app.use(route.post('/ui/signon', rider.signon));
 app.use(route.patch('/ui/:rider/destination', rider.destination));
-app.use(route.patch('/ui/:rider/closeSession', rider.closeSession));
-// app.use(route.patch('location/update-driver', internal.updateDriver));
+app.use(route.patch('/ui/:rider/accept', rider.accept));
+app.use(route.delete('/ui/:rider/cancel', rider.cancel));
 app.use(route.get('/ui/:rider/ridehistory', rider.rideHistory));
-app.use(route.get('/ui/:event', rider.rideLookup));
+app.use(route.get('/ui/:rider/:eventId', rider.rideLookup));
 
 /* Start server */
 app.listen(port, () => {
