@@ -1,0 +1,12 @@
+config:
+  target: 'http://127.0.0.1:5000'
+  phases:
+    - duration: 60
+      arrivalRate: 100
+  defaults:
+    headers:
+      # x-my-service-auth: '987401838271002188298567'
+scenarios:
+  - flow:
+    - get:
+        url: "/ui/111111111/ridehistory"

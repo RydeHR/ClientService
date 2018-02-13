@@ -100,7 +100,7 @@ var generateEvents = (min, max) => {
       `${ev.price},`+
       `${ev.success}\n`;
     // Logs every 100000 generations to console to quickly detect failures
-    if(i % 100000 === 0) {
+    if(i % 10000 === 0) {
       console.log(`${i} completed...`)
     }
   }
@@ -111,21 +111,21 @@ var generateEvents = (min, max) => {
 // Takes the generated object and writes it to a data file template with an incremented number at the end
 var writeData = function (data, fileName, fileNum) {
   console.log(`Attempting write of objects to /data/${fileName}${fileNum}.csv`);
-  fs.writeFileSync(`./data/${fileName}${fileNum}.csv`, data,);
+  fs.writeFileSync(`./data/${fileName}${fileNum}.csv`, data);
   console.log(`${fileName}${fileNum}.csv written successfully`);
 };
 
-// Writes generated data in 1M record chunks to avoid running out of memory
+// Writes generated data in 100K record chunks to avoid running out of memory
 var writeDataChunks = function(chunks) {
   var start = new Date();
   var min = 1;
-  var max = 1000000;
+  var max = 100000;
   for (let i = 0; i < chunks; i++) {
     console.log(`Generating File ${i}...`);
     var data = generateEvents(min, max)
     writeData(data, 'dataOutput', `${i}`);
-    min += 1000000;
-    max += 1000000;
+    min += 100000;
+    max += 100000;
   }
   var end = new Date();
   var duration = end - start;
@@ -136,11 +136,11 @@ var writeDataChunks = function(chunks) {
 
 writeData(formattedRiders, 'riderTable', '');
 
-writeDataChunks(10);
+writeDataChunks(100);
 
 
 /*
-create table rides_by_user(event_ID uuid, event_Start timestamp, event_End timestamp, event_isClosed boolean, rider_ID int, rider_Name text, driver_ID int, driver_Name text, driver_Is_Available boolean, timestamp_Pickup timestamp, timestamp_Dropoff timestamp, geolocation_Pickup list <float>, geolocation_Dropoff list <float>, surgeZone int, surge_Multi float, price decimal, success boolean, primary key(rider_ID, event_ID));
+create table rides_by_user(event_ID uuid, event_Start timestamp, event_End timestamp, event_isClosed boolean, rider_ID int, rider_Name text, driver_ID int, driver_Name text, driver_Is_Available boolean, timestamp_Pickup timestamp, timestamp_Dropoff timestamp, geolocation_Pickup list <float>, geolocation_Dropoff list <float>, surgeZone int, surge_Multi float, price decimal, success boolean, primary key(rider_ID));
 COPY rides_by_user(event_ID, event_Start, event_End, event_isClosed, rider_ID, rider_Name, driver_ID, driver_Name, driver_Is_Available, timestamp_Pickup, timestamp_Dropoff, geolocation_Pickup, geolocation_Dropoff, surgeZone, surge_Multi, price, success) FROM '/usr/local/Cellar/cassandra/3.11.1/bin/dataOutput0.csv' with delimiter =',';
 
 create table riders(rider_ID int, rider_Name text, primary key(rider_ID));
