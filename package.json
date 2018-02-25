@@ -1,0 +1,38 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "babel": {},
+  "description": "Uber for cars",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --harmony index.js",
+    "build": "babel src -d lib",
+    "test": "nyc mocha --harmony ./tests/unit-tests/",
+    "dev": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RydeHR"
+  },
+  "author": "markarce",
+  "license": "ISC",
+  "dependencies": {
+    "cassandra-driver": "^3.3.0",
+    "dotenv": "^5.0.0",
+    "koa": "^2.4.1",
+    "koa-bodyparser": "^4.2.0",
+    "koa-route": "^3.2.0",
+    "koa-session": "^5.8.1",
+    "newrelic": "^2.7.0",
+    "uuid": "^3.2.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "chai": "^4.1.2",
+    "chai-http": "^3.0.0",
+    "chai-uuid": "^1.0.6",
+    "faker": "^4.1.0",
+    "mocha": "^5.0.0",
+    "nyc": "^11.4.1"
+  }
+}

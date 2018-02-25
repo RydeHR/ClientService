@@ -1,0 +1,31 @@
+config:
+  target: 'http://127.0.0.1:5000'
+  phases:
+    - duration: 120
+      arrivalRate: 800
+  defaults:
+    headers:
+      'Content-Type' : application/json
+scenarios:
+  - flow:
+      - post:
+          url: "/ui/signon"
+          json:
+            riderId: 333333333
+            riderName: "Mark"
+            geolocationPickup: [55.5555, 55.5555]
+        # capture:
+        #   json: "$.eventId"
+        #   as: "eventId"
+    # - get:
+    #     url: "/ui/333333333/{{ eventId }}"
+    #     match:
+    #       json: "$.rider_name"
+    #       value: " {{ riderName }}"
+
+
+    #   http:
+    # # Responses have to be sent within 10 seconds or the request will be aborted
+    # timeout: 10
+    # tls:
+    #   rejectUnauthorized: false
